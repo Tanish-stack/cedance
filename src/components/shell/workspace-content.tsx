@@ -2,8 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  Inbox,
-  Bot,
   Target,
   Settings,
   Plus,
@@ -15,6 +13,7 @@ import { CommitmentsTable } from "@/components/ledger/commitments-table";
 import { CommitmentDrawer } from "@/components/ledger/commitment-drawer";
 import { MOCK_COMMITMENTS } from "@/lib/mock-tasks";
 import { BlockerRadarView } from "@/components/blockers/blocker-radar-view";
+import { StreamAuditView } from "@/components/stream-audit/stream-audit-view";
 import type { CommitmentTask } from "@/types/task";
 import type { NavItemKey } from "./sidebar";
 
@@ -26,9 +25,9 @@ export function WorkspaceContent({ activeItem }: WorkspaceContentProps) {
   return (
     <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       {activeItem === "commitments-ledger" && <CommitmentsLedgerShell />}
-      {activeItem === "ingest-stream" && <IngestStreamShell />}
+      {activeItem === "ingest-stream" && <StreamAuditView initialView="stream" />}
       {activeItem === "blocker-radar" && <BlockerRadarView />}
-      {activeItem === "agent-audit" && <AgentAuditShell />}
+      {activeItem === "agent-audit" && <StreamAuditView initialView="audit" />}
       {activeItem === "milestones" && <MilestonesShell />}
       {activeItem === "settings" && <SettingsShell />}
     </main>
@@ -177,59 +176,7 @@ function CommitmentsLedgerShell() {
   );
 }
 
-/**
- * Shell view for Ingest Stream
- */
-function IngestStreamShell() {
-  return (
-    <div className="space-y-4">
-      <div className="pb-4 border-b border-[#e6e6e6]">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#000000]">
-          Ingest Stream
-        </h1>
-        <p className="text-xs sm:text-sm text-[#615d59] mt-0.5">
-          Realtime bidirectional feed between Telegram teammates and the Gemini coordinator.
-        </p>
-      </div>
 
-      <div className="p-6 bg-white rounded-xl border border-[#e6e6e6] shadow-xs text-center space-y-2 max-w-lg mx-auto">
-        <Inbox className="w-8 h-8 text-[#0075de] mx-auto" />
-        <h2 className="text-sm font-semibold text-[#000000]">Telegram Message Pipeline</h2>
-        <p className="text-xs text-[#615d59]">
-          Captures inbound responses, extracts progress percentage, identifies blockers, and logs proof of real human interactions.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-
-
-/**
- * Shell view for Agent Audit
- */
-function AgentAuditShell() {
-  return (
-    <div className="space-y-4">
-      <div className="pb-4 border-b border-[#e6e6e6]">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#000000]">
-          Agent Decision Audit
-        </h1>
-        <p className="text-xs sm:text-sm text-[#615d59] mt-0.5">
-          Verifiable audit trail of Gemini classifications, confidence scores, and state transitions.
-        </p>
-      </div>
-
-      <div className="p-6 bg-white rounded-xl border border-[#e6e6e6] shadow-xs text-center space-y-2 max-w-lg mx-auto">
-        <Bot className="w-8 h-8 text-[#0075de] mx-auto" />
-        <h2 className="text-sm font-semibold text-[#000000]">Deterministic State Machine</h2>
-        <p className="text-xs text-[#615d59]">
-          Gemini suggests intents; state machine validates in code. Complete requires passing evidence.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Shell view for Milestones

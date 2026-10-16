@@ -1,5 +1,7 @@
 import { TaskStatus } from "@/lib/design-tokens";
 
+export type BlockerSeverity = "Critical" | "High" | "Medium" | "Low";
+
 export interface TaskDependency {
   id: string;
   title: string;
@@ -56,4 +58,12 @@ export interface CommitmentTask {
   };
   suggestedActions: string[];
   activityHistory: ActivityEvent[];
+}
+
+export interface BlockedTask extends CommitmentTask {
+  severity: BlockerSeverity;
+  missingDependency: string;
+  escalationStatus: string;
+  blockerAgeHours: number; // for sorting/filtering
+  severityRationale: string;
 }

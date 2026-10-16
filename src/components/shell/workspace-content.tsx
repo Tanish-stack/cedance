@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import {
   Inbox,
-  ShieldAlert,
   Bot,
   Target,
   Settings,
@@ -15,6 +14,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { CommitmentsTable } from "@/components/ledger/commitments-table";
 import { CommitmentDrawer } from "@/components/ledger/commitment-drawer";
 import { MOCK_COMMITMENTS } from "@/lib/mock-tasks";
+import { BlockerRadarView } from "@/components/blockers/blocker-radar-view";
 import type { CommitmentTask } from "@/types/task";
 import type { NavItemKey } from "./sidebar";
 
@@ -27,7 +27,7 @@ export function WorkspaceContent({ activeItem }: WorkspaceContentProps) {
     <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       {activeItem === "commitments-ledger" && <CommitmentsLedgerShell />}
       {activeItem === "ingest-stream" && <IngestStreamShell />}
-      {activeItem === "blocker-radar" && <BlockerRadarShell />}
+      {activeItem === "blocker-radar" && <BlockerRadarView />}
       {activeItem === "agent-audit" && <AgentAuditShell />}
       {activeItem === "milestones" && <MilestonesShell />}
       {activeItem === "settings" && <SettingsShell />}
@@ -203,31 +203,7 @@ function IngestStreamShell() {
   );
 }
 
-/**
- * Shell view for Blocker Radar
- */
-function BlockerRadarShell() {
-  return (
-    <div className="space-y-4">
-      <div className="pb-4 border-b border-[#e6e6e6]">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#000000]">
-          Blocker Radar
-        </h1>
-        <p className="text-xs sm:text-sm text-[#615d59] mt-0.5">
-          Early detection of dependencies, stalled critical paths, and unblocker routing.
-        </p>
-      </div>
 
-      <div className="p-6 bg-white rounded-xl border border-[#dd5b00]/30 shadow-xs text-center space-y-2 max-w-lg mx-auto">
-        <ShieldAlert className="w-8 h-8 text-[#dd5b00] mx-auto" />
-        <h2 className="text-sm font-semibold text-[#000000]">1 Active Blocker Detected</h2>
-        <p className="text-xs text-[#615d59]">
-          Task &ldquo;Connect the payment API&rdquo; is blocked waiting for test credentials. Downstream tasks flagged At Risk.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Shell view for Agent Audit

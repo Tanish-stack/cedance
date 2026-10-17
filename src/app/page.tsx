@@ -199,8 +199,22 @@ export default function DashboardPage() {
   };
 
   const handleSendPing = async (userId: string, text: string) => {
-    await api.sendTelegramMessage(userId, text);
-    await refreshData();
+    try {
+      await api.sendTelegramMessage(userId, text);
+      await refreshData();
+    } catch {
+      // Local optimistic fallback when backend is offline
+      const newMsg: Message = {
+        id: `msg-${Date.now()}`,
+        user_id: userId,
+        task_id: null,
+        direction: "bot_to_user",
+        text,
+        created_at: new Date().toISOString(),
+        user_name: users.find((u) => u.id === userId)?.name || "Teammate",
+      };
+      setMessages((prev) => [newMsg, ...prev]);
+    }
   };
 
   const handleResolveBlocker = async (taskId: string, note?: string) => {

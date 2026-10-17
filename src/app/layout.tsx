@@ -1,19 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { inter } from "@/lib/fonts";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Cadance — AI Autonomous Group Project Coordinator",
+  title: "Cedance — AI Autonomous Group Project Coordinator",
   description: "Autonomous AI coordinator for engineering teams, turning claims into verified milestones.",
 };
 
@@ -23,11 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <body className={`${inter.className} min-h-full flex flex-col bg-background text-foreground font-sans`}>
+        {children}
+      </body>
     </html>
   );
 }

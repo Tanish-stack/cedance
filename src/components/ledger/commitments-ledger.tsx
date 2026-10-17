@@ -78,13 +78,13 @@ export function CommitmentsLedger({
   return (
     <div className="flex flex-col flex-1 p-6 space-y-4 max-w-7xl mx-auto w-full">
       {/* Top Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6e6e6] pb-3 dark:border-zinc-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6e6e6] pb-3.5 dark:border-zinc-800">
         {/* Status Tabs */}
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             onClick={() => setStatusFilter("all")}
             className={cn(
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
               statusFilter === "all"
                 ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold"
                 : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70 dark:bg-zinc-900 dark:text-zinc-400"
@@ -98,26 +98,26 @@ export function CommitmentsLedger({
               key={st}
               onClick={() => setStatusFilter(st)}
               className={cn(
-                "rounded-full px-2.5 py-1 text-xs font-medium transition-colors flex items-center gap-1.5",
+                "rounded-full px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5",
                 statusFilter === st
                   ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold"
                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70 dark:bg-zinc-900 dark:text-zinc-400"
               )}
             >
-              <span className={cn("h-1.5 w-1.5 rounded-full", statusStyles[st].dot)} />
+              <span className={cn("h-2 w-2 rounded-full", statusStyles[st].dot)} />
               <span>{st}</span>
-              <span className="opacity-70 text-[10px]">({counts[st] || 0})</span>
+              <span className="opacity-70 text-xs">({counts[st] || 0})</span>
             </button>
           ))}
         </div>
 
         {/* Owner Selector Filter */}
         <div className="flex items-center gap-2">
-          <Filter className="h-3.5 w-3.5 text-zinc-400" />
+          <Filter className="h-4 w-4 text-zinc-400" />
           <select
             value={ownerFilter}
             onChange={(e) => setOwnerFilter(e.target.value)}
-            className="rounded-md border border-[#e6e6e6] bg-white px-2.5 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+            className="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
           >
             <option value="all">All Assignees</option>
             {uniqueOwners.map((owner) => (
@@ -130,23 +130,23 @@ export function CommitmentsLedger({
       </div>
 
       {/* Ledger Table */}
-      <div className="overflow-hidden rounded-lg border border-[#e6e6e6] bg-white shadow-2xs dark:border-zinc-800 dark:bg-zinc-950">
-        <table className="w-full border-collapse text-left text-xs">
+      <div className="overflow-x-auto rounded-lg border border-[#e6e6e6] bg-white shadow-2xs dark:border-zinc-800 dark:bg-zinc-950">
+        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-[#e6e6e6] bg-[#fafaf9] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
-              <th className="py-2.5 pl-4 pr-2 font-medium w-36">Status</th>
-              <th className="py-2.5 px-3 font-medium">Deliverable & Acceptance</th>
-              <th className="py-2.5 px-3 font-medium w-28">Owner</th>
-              <th className="py-2.5 px-3 font-medium w-36">Progress</th>
-              <th className="py-2.5 px-3 font-medium w-24">Deadline</th>
-              <th className="py-2.5 px-3 font-medium w-24">Risk</th>
-              <th className="py-2.5 pl-2 pr-4 font-medium text-right w-24">Actions</th>
+              <th className="py-3 pl-4 pr-2 text-xs font-semibold uppercase tracking-wider w-36">Status</th>
+              <th className="py-3 px-3 text-xs font-semibold uppercase tracking-wider">Deliverable & Acceptance</th>
+              <th className="py-3 px-3 text-xs font-semibold uppercase tracking-wider w-32">Owner</th>
+              <th className="py-3 px-3 text-xs font-semibold uppercase tracking-wider w-40">Progress</th>
+              <th className="py-3 px-3 text-xs font-semibold uppercase tracking-wider w-28">Deadline</th>
+              <th className="py-3 px-3 text-xs font-semibold uppercase tracking-wider w-24">Risk</th>
+              <th className="py-3 pl-2 pr-4 text-xs font-semibold uppercase tracking-wider text-right w-24">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e6e6e6] dark:divide-zinc-800">
             {filteredTasks.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-zinc-400">
+                <td colSpan={7} className="py-12 text-center text-zinc-400 text-sm">
                   No commitments match your current filter.
                 </td>
               </tr>
@@ -161,10 +161,10 @@ export function CommitmentsLedger({
                     className="group hover:bg-[#fbfbfa] dark:hover:bg-zinc-900/60 cursor-pointer transition-colors"
                   >
                     {/* Status Badge */}
-                    <td className="py-3 pl-4 pr-2 whitespace-nowrap">
+                    <td className="py-3.5 pl-4 pr-2 whitespace-nowrap">
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
                           style.badge
                         )}
                       >
@@ -174,27 +174,27 @@ export function CommitmentsLedger({
                     </td>
 
                     {/* Title & Criteria */}
-                    <td className="py-3 px-3">
+                    <td className="py-3.5 px-3">
                       <div className="flex flex-col max-w-lg">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs">
+                          <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
                             {task.title}
                           </span>
                           {(task.dependencies || []).length > 0 && (
                             <span
-                              className="inline-flex items-center gap-0.5 text-[10px] text-zinc-400"
+                              className="inline-flex items-center gap-0.5 text-xs text-zinc-400"
                               title="Has upstream prerequisites"
                             >
-                              <GitBranch className="h-3 w-3" />
+                              <GitBranch className="h-3.5 w-3.5" />
                             </span>
                           )}
                         </div>
                         {task.status === "Blocked" && task.blocker_text ? (
-                          <span className="text-[11px] text-rose-600 dark:text-rose-400 font-mono mt-0.5">
+                          <span className="text-xs text-rose-600 dark:text-rose-400 font-mono mt-0.5">
                             ⛔ Blocker: {task.blocker_text}
                           </span>
                         ) : (
-                          <span className="text-[11px] text-zinc-400 truncate mt-0.5">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
                             Done means: {task.acceptance_criteria || "Standard review"}
                           </span>
                         )}
@@ -202,16 +202,16 @@ export function CommitmentsLedger({
                     </td>
 
                     {/* Owner */}
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                    <td className="py-3.5 px-3 whitespace-nowrap">
+                      <span className="font-medium text-zinc-700 dark:text-zinc-300 text-sm">
                         {task.owner_name || "Unassigned"}
                       </span>
                     </td>
 
                     {/* Progress Bar */}
-                    <td className="py-3 px-3 whitespace-nowrap">
+                    <td className="py-3.5 px-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                        <div className="h-2 w-16 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
                           <div
                             className={cn(
                               "h-full rounded-full transition-all",
@@ -224,31 +224,31 @@ export function CommitmentsLedger({
                             style={{ width: `${task.progress_pct}%` }}
                           />
                         </div>
-                        <span className="font-mono text-[10px] text-zinc-500">
+                        <span className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
                           {task.progress_pct}%
                         </span>
                       </div>
                     </td>
 
                     {/* Deadline */}
-                    <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px] text-zinc-500">
+                    <td className="py-3.5 px-3 whitespace-nowrap font-mono text-xs text-zinc-600 dark:text-zinc-400">
                       {task.deadline ? task.deadline.slice(5) : "—"}
                     </td>
 
                     {/* Risk Tag */}
-                    <td className="py-3 px-3 whitespace-nowrap">
+                    <td className="py-3.5 px-3 whitespace-nowrap">
                       {task.at_risk ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                          <AlertTriangle className="h-2.5 w-2.5" />
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          <AlertTriangle className="h-3 w-3" />
                           At Risk
                         </span>
                       ) : (
-                        <span className="text-[10px] text-zinc-400 font-medium">On Track</span>
+                        <span className="text-xs text-zinc-400 font-medium">On Track</span>
                       )}
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3 pl-2 pr-4 text-right whitespace-nowrap">
+                    <td className="py-3.5 pl-2 pr-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100">
                         {task.status === "Blocked" ? (
                           <Button
@@ -258,7 +258,7 @@ export function CommitmentsLedger({
                               e.stopPropagation();
                               onResolveBlocker(task.id);
                             }}
-                            className="text-[10px] border-rose-200 text-rose-700 hover:bg-rose-50"
+                            className="text-xs border-rose-200 text-rose-700 hover:bg-rose-50"
                           >
                             Resolve
                           </Button>
@@ -272,10 +272,10 @@ export function CommitmentsLedger({
                             }}
                             title="Nudge owner on Telegram"
                           >
-                            <Send className="h-3 w-3 text-zinc-500 hover:text-[#2383e2]" />
+                            <Send className="h-3.5 w-3.5 text-zinc-500 hover:text-[#2383e2]" />
                           </Button>
                         )}
-                        <ChevronRight className="h-3.5 w-3.5 text-zinc-400 group-hover:text-zinc-600" />
+                        <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-600" />
                       </div>
                     </td>
                   </tr>

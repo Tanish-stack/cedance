@@ -98,10 +98,10 @@ export function Sidebar({
               <FolderGit2 className="h-4 w-4" />
             </div>
             <div className="flex flex-col truncate">
-              <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate tracking-tight">
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate tracking-tight">
                 Cadance / Core Team
               </span>
-              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
                 AI Coordinator · Spring 26
               </span>
             </div>
@@ -126,7 +126,7 @@ export function Sidebar({
       {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
         {!collapsed && (
-          <div className="px-2 pb-1.5 pt-1 text-[11px] font-medium tracking-wider text-zinc-400 uppercase">
+          <div className="px-2 pb-1.5 pt-1 text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             Coordination Core
           </div>
         )}
@@ -140,7 +140,7 @@ export function Sidebar({
               key={item.id}
               onClick={() => onTabChange(item.id)}
               className={cn(
-                "group relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors text-left",
+                "group relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors text-left",
                 isActive
                   ? "bg-[#efefed] text-zinc-950 font-semibold dark:bg-zinc-800 dark:text-zinc-50"
                   : "text-zinc-600 hover:bg-[#f4f4f2] hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
@@ -160,7 +160,7 @@ export function Sidebar({
                   {item.badge !== undefined && (
                     <span
                       className={cn(
-                        "ml-2 rounded-full px-1.5 py-0.2 text-[10px]",
+                        "ml-2 rounded-full px-2 py-0.5 text-xs font-medium",
                         item.badgeColor
                       )}
                     >
@@ -179,17 +179,17 @@ export function Sidebar({
         {!collapsed ? (
           <div className="rounded-lg bg-white p-2.5 border border-[#e6e6e6] dark:bg-zinc-900 dark:border-zinc-800 shadow-2xs space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
                 <Bot className="h-3.5 w-3.5 text-[#2383e2]" />
                 <span>Telegram Bot</span>
               </div>
-              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Active
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-[10px] text-zinc-500">
+            <div className="flex items-center justify-between text-xs text-zinc-500">
               <span>Classifier Engine</span>
               <span className="flex items-center gap-1 font-mono text-zinc-700 dark:text-zinc-300">
                 <Sparkles className="h-2.5 w-2.5 text-indigo-500" />
@@ -197,7 +197,7 @@ export function Sidebar({
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-0.5 border-t border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center justify-between text-xs text-zinc-500 pt-0.5 border-t border-zinc-100 dark:border-zinc-800">
               <span>Backend API</span>
               <span className={cn("font-medium", backendOnline ? "text-emerald-600" : "text-amber-600")}>
                 {backendOnline ? ":3001 Live" : "Fallback Mode"}

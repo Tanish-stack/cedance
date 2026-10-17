@@ -237,6 +237,8 @@ async function startBot() {
                         "?start=kabir",
                 );
             },
+        }).catch((err) => {
+            console.warn(`[bot.js] Telegram polling notice: ${err.message}. Outbound messages & REST API remain active.`);
         });
     } catch (err) {
         console.warn(`[bot.js] Could not connect to Telegram: ${err.message}. Backend will continue running.`);

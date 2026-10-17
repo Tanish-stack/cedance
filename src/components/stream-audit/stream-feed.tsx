@@ -1,423 +1,301 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
-  Search,
-  Filter,
+  Radio,
   Send,
-  MessageSquare,
-  Sparkles,
-  ShieldAlert,
-  ArrowRight,
-  ExternalLink,
-  AlertTriangle,
-  RotateCcw,
-  Check,
-  Eye,
+  Bot,
+  User,
+  Zap,
 } from "lucide-react";
+import { Message, User as TeamUser } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { StreamMessage } from "@/types/stream-audit";
+import { cn } from "@/lib/utils";
 
 interface StreamFeedProps {
-  messages: StreamMessage[];
-  onOpenTaskDrawer: (taskId: string) => void;
-  onInspectMessage: (message: StreamMessage) => void;
-  onToggleReviewStatus: (messageId: string) => void;
+  messages: Message[];
+  users: TeamUser[];
+  onSimulateReply: (userId: string, text: string) => Promise<void>;
+  onInspectMessage?: (message: Message) => void;
 }
 
 export function StreamFeed({
   messages,
-  onOpenTaskDrawer,
-  onInspectMessage,
-  onToggleReviewStatus,
+  users,
+  onSimulateReply,
 }: StreamFeedProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [quickFilter, setQuickFilter] = useState<"all" | "blocked" | "needs-review">("all");
+  const [selectedUserForSim, setSelectedUserForSim] = useState<string>(
+    users.find((u) => u.name === "Kabir")?.id || users[0]?.id || ""
+  );
+  const [simText, setSimText] = useState("connected, but waiting for test credentials");
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [directionFilter, setDirectionFilter] = useState<string>("all");
+  const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
+  const [inspectedMessage, setInspectedMessage] = useState<Message | null>(null);
 
-  // Filtering
-  const filteredMessages = useMemo(() => {
-    return messages.filter((msg) => {
-      // Quick filter
-      if (quickFilter === "blocked" && !msg.interpretation.blockerDetected) {
-        return false;
-      }
-      if (quickFilter === "needs-review" && msg.processingStatus !== "Needs Review") {
-        return false;
-      }
+  const handleSimulate = async (customText?: string) => {
+    const textToSend = customText || simText;
+    if (!textToSend.trim() || !selectedUserForSim) return;
+    setIsSimulating(true);
+    try {
+      await onSimulateReply(selectedUserForSim, textToSend.trim());
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Simulation failed: ${msg}`);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
 
-      // Source Filter
-      if (sourceFilter !== "all" && msg.sourcePlatform !== sourceFilter) {
-        return false;
-      }
+  const intentColors: Record<string, { bg: string; text: string }> = {
+    blocked: { bg: "bg-rose-100 dark:bg-rose-950/70", text: "text-rose-800 dark:text-rose-300 font-semibold" },
+    claims_done: { bg: "bg-purple-100 dark:bg-purple-950/70", text: "text-purple-800 dark:text-purple-300 font-semibold" },
+    progress: { bg: "bg-blue-100 dark:bg-blue-950/70", text: "text-blue-800 dark:text-blue-300" },
+    question: { bg: "bg-amber-100 dark:bg-amber-950/70", text: "text-amber-800 dark:text-amber-300" },
+    unclear: { bg: "bg-zinc-100 dark:bg-zinc-800", text: "text-zinc-700 dark:text-zinc-300" },
+  };
 
-      // Status Filter
-      if (statusFilter !== "all" && msg.processingStatus !== statusFilter) {
-        return false;
-      }
-
-      // Search Query
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesSender =
-          msg.senderName.toLowerCase().includes(query) ||
-          msg.senderUsername.toLowerCase().includes(query);
-        const matchesText = msg.messageText.toLowerCase().includes(query);
-        const matchesTask =
-          (msg.relatedTaskCode && msg.relatedTaskCode.toLowerCase().includes(query)) ||
-          (msg.relatedTaskTitle && msg.relatedTaskTitle.toLowerCase().includes(query));
-        const matchesInterpretation =
-          msg.interpretation.summary.toLowerCase().includes(query) ||
-          (msg.interpretation.blockerDescription &&
-            msg.interpretation.blockerDescription.toLowerCase().includes(query));
-
-        if (!matchesSender && !matchesText && !matchesTask && !matchesInterpretation) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [messages, searchQuery, sourceFilter, statusFilter, quickFilter]);
-
-  function handleResetFilters() {
-    setSearchQuery("");
-    setSourceFilter("all");
-    setStatusFilter("all");
-    setQuickFilter("all");
-  }
+  const filteredMessages = messages.filter((m) => {
+    if (directionFilter !== "all" && m.direction !== directionFilter) return false;
+    if (needsReviewOnly && !m.needs_review && (m.confidence || 1) >= 0.7) return false;
+    return true;
+  });
 
   return (
-    <div className="space-y-4">
-      {/* Search and Filters Bar */}
-      <div className="p-3 bg-white rounded-xl border border-[#e6e6e6] shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
-          {/* Search bar */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a39e98]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search message text, sender, task, or blocker..."
-              className="w-full h-8 pl-8 pr-3 text-xs bg-[#f6f5f4] hover:bg-[#f6f5f4]/80 focus:bg-white border border-[#e6e6e6] focus:border-[#0075de] rounded-md transition-all outline-none placeholder:text-[#a39e98] text-[#000000]"
-            />
+    <div className="flex flex-col flex-1 p-6 space-y-5 max-w-7xl mx-auto w-full">
+      {/* Simulation Rehearsal Bar */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/60 dark:bg-amber-950/30 space-y-3 shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-600 text-white">
+              <Zap className="h-3.5 w-3.5 fill-white" />
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold text-amber-950 dark:text-amber-200">
+                Live Telegram Interaction Simulator
+              </h3>
+              <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                Simulate inbound member replies to verify Gemini interpretation & state transitions on the spot
+              </p>
+            </div>
           </div>
 
-          {/* Filter Dropdowns */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Source Platform Filter */}
-            <Select
-              value={sourceFilter}
-              onValueChange={(val) => setSourceFilter(val ?? "all")}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => {
+                const kabir = users.find((u) => u.name === "Kabir")?.id || users[0]?.id || "";
+                setSelectedUserForSim(kabir);
+                setSimText("connected, but waiting for test credentials");
+                handleSimulate("connected, but waiting for test credentials");
+              }}
+              className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100/60 dark:bg-zinc-900 dark:text-amber-200 dark:border-amber-900"
             >
-              <SelectTrigger className="h-8 text-xs bg-[#f6f5f4] border-[#e6e6e6] w-[130px]">
-                <SelectValue placeholder="Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">
-                  All Sources
-                </SelectItem>
-                <SelectItem value="Telegram" className="text-xs text-[#0075de]">
-                  Telegram
-                </SelectItem>
-                <SelectItem value="Slack" className="text-xs text-[#4a154b]">
-                  Slack
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Processing Status Filter */}
-            <Select
-              value={statusFilter}
-              onValueChange={(val) => setStatusFilter(val ?? "all")}
+              Test Kabir Blocker
+            </button>
+            <button
+              onClick={() => {
+                const aisha = users.find((u) => u.name === "Aisha")?.id || users[0]?.id || "";
+                setSelectedUserForSim(aisha);
+                setSimText("done, merged the checkout PR https://github.com/org/repo/pull/12");
+                handleSimulate("done, merged the checkout PR https://github.com/org/repo/pull/12");
+              }}
+              className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100/60 dark:bg-zinc-900 dark:text-amber-200 dark:border-amber-900"
             >
-              <SelectTrigger className="h-8 text-xs bg-[#f6f5f4] border-[#e6e6e6] w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">
-                  All Statuses
-                </SelectItem>
-                <SelectItem value="Received" className="text-xs">
-                  Received
-                </SelectItem>
-                <SelectItem value="Processed" className="text-xs text-[#1aae39]">
-                  Processed
-                </SelectItem>
-                <SelectItem value="Needs Review" className="text-xs text-[#dd5b00]">
-                  Needs Review
-                </SelectItem>
-                <SelectItem value="Failed" className="text-xs text-red-600">
-                  Failed
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              Test Aisha &quot;Claims Done&quot;
+            </button>
+            <button
+              onClick={() => {
+                const ravi = users.find((u) => u.name === "Ravi")?.id || users[0]?.id || "";
+                setSelectedUserForSim(ravi);
+                setSimText("I'm 80% done with CI/CD pipeline");
+                handleSimulate("I'm 80% done with CI/CD pipeline");
+              }}
+              className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100/60 dark:bg-zinc-900 dark:text-amber-200 dark:border-amber-900"
+            >
+              Test Ravi 80% Progress
+            </button>
           </div>
         </div>
 
-        {/* Quick Filter Badges */}
-        <div className="flex items-center gap-2 pt-2 border-t border-[#f6f5f4] flex-wrap">
-          <span className="text-[11px] font-semibold text-[#615d59]">Quick View:</span>
-          <button
-            type="button"
-            onClick={() => setQuickFilter("all")}
-            className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
-              quickFilter === "all"
-                ? "bg-[#000000] text-white border-[#000000]"
-                : "bg-white text-[#615d59] border-[#e6e6e6] hover:bg-[#f6f5f4]"
-            }`}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedUserForSim}
+            onChange={(e) => setSelectedUserForSim(e.target.value)}
+            className="rounded-md border border-amber-300 bg-white px-2.5 py-1.5 text-xs text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 dark:border-amber-900"
           >
-            All Ingested ({messages.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setQuickFilter("blocked")}
-            className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
-              quickFilter === "blocked"
-                ? "bg-[#dd5b00] text-white border-[#dd5b00]"
-                : "bg-white text-[#dd5b00] border-[#dd5b00]/30 hover:bg-[#dd5b00]/10"
-            }`}
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                Simulate: {u.name} ({u.role})
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            value={simText}
+            onChange={(e) => setSimText(e.target.value)}
+            placeholder="Type simulated Telegram response..."
+            className="flex-1 min-w-[200px] rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none dark:bg-zinc-900 dark:text-zinc-100 dark:border-amber-900"
+          />
+
+          <Button
+            size="sm"
+            onClick={() => handleSimulate()}
+            disabled={isSimulating}
+            className="bg-amber-700 hover:bg-amber-800 text-white text-xs font-medium gap-1 shadow-xs"
           >
-            Blockers Detected ({messages.filter((m) => m.interpretation.blockerDetected).length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setQuickFilter("needs-review")}
-            className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
-              quickFilter === "needs-review"
-                ? "bg-[#213183] text-white border-[#213183]"
-                : "bg-white text-[#213183] border-[#213183]/30 hover:bg-[#213183]/10"
-            }`}
-          >
-            Needs Review ({messages.filter((m) => m.processingStatus === "Needs Review").length})
-          </button>
+            <Send className="h-3 w-3" />
+            {isSimulating ? "Processing..." : "Send Simulated Inbound"}
+          </Button>
         </div>
       </div>
 
-      {/* Messages List Feed */}
-      {filteredMessages.length === 0 ? (
-        <div className="p-10 bg-white rounded-xl border border-[#e6e6e6] shadow-xs text-center space-y-3">
-          <div className="w-10 h-10 rounded-full bg-[#f6f5f4] text-[#a39e98] flex items-center justify-center mx-auto">
-            <Filter className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-[#000000]">No messages match your criteria</h3>
-            <p className="text-xs text-[#615d59] mt-1 max-w-sm mx-auto">
-              Try adjusting your search terms or clearing the source and status filters.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleResetFilters}
-            className="h-7 text-xs border-[#e6e6e6] text-[#0075de] inline-flex items-center gap-1.5"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Reset All Filters</span>
-          </Button>
+      {/* Stream Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6e6e6] pb-3 dark:border-zinc-800">
+        <div className="flex items-center gap-2">
+          <Radio className="h-4 w-4 text-[#2383e2] animate-pulse" />
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            Realtime Ingestion Feed
+          </h3>
+          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-mono">
+            {messages.length} messages logged
+          </span>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredMessages.map((msg) => {
-            const isTelegram = msg.sourcePlatform === "Telegram";
-            const isBlocked = msg.interpretation.blockerDetected;
-            const isNeedsReview = msg.processingStatus === "Needs Review";
+
+        <div className="flex items-center gap-3 text-xs">
+          <label className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={needsReviewOnly}
+              onChange={(e) => setNeedsReviewOnly(e.target.checked)}
+              className="rounded"
+            />
+            <span>Low Confidence Only (&lt;0.70)</span>
+          </label>
+
+          <select
+            value={directionFilter}
+            onChange={(e) => setDirectionFilter(e.target.value)}
+            className="rounded-md border border-[#e6e6e6] bg-white px-2.5 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+          >
+            <option value="all">All Traffic</option>
+            <option value="user_to_bot">Inbound (Teammates)</option>
+            <option value="bot_to_user">Outbound (Bot Prompts)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Feed Messages */}
+      <div className="space-y-3">
+        {filteredMessages.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[#e6e6e6] p-12 text-center text-zinc-400 dark:border-zinc-800 text-xs">
+            No stream messages match the selected filters.
+          </div>
+        ) : (
+          filteredMessages.map((msg) => {
+            const isOutbound = msg.direction === "bot_to_user";
+            const intent = msg.intent;
+            const intentStyle = intent ? intentColors[intent] : null;
 
             return (
               <div
                 key={msg.id}
-                className={`p-4 bg-white rounded-xl border transition-all shadow-xs hover:border-[#0075de]/40 ${
-                  isBlocked
-                    ? "border-l-4 border-l-[#dd5b00] border-[#e6e6e6]"
-                    : isNeedsReview
-                    ? "border-l-4 border-l-[#213183] border-[#e6e6e6]"
-                    : "border-[#e6e6e6]"
-                }`}
+                onClick={() => setInspectedMessage(msg)}
+                className="group flex flex-col rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-2xs hover:border-zinc-300 transition-all dark:border-zinc-800 dark:bg-zinc-950 cursor-pointer space-y-2"
               >
-                {/* Message Header */}
-                <div className="flex items-center justify-between gap-2 flex-wrap pb-2.5 border-b border-[#f6f5f4]">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Avatar className="w-7 h-7 border border-[#e6e6e6]">
-                      <AvatarFallback className="text-[10px] font-semibold bg-[#0075de]/10 text-[#0075de]">
-                        {msg.senderName.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-semibold text-[#000000]">{msg.senderName}</span>
-                        <span className="text-[10px] text-[#a39e98]">@{msg.senderUsername}</span>
-                      </div>
-                    </div>
-
-                    {/* Source Platform Badge */}
-                    <span
-                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${
-                        isTelegram
-                          ? "bg-[#0075de]/10 text-[#0075de] border-[#0075de]/20"
-                          : "bg-[#4a154b]/10 text-[#4a154b] border-[#4a154b]/20"
-                      }`}
-                    >
-                      {isTelegram ? <Send className="w-2.5 h-2.5" /> : <MessageSquare className="w-2.5 h-2.5" />}
-                      <span>{msg.sourcePlatform}</span>
-                    </span>
-                  </div>
-
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {/* Timestamp */}
-                    <span className="text-[11px] text-[#615d59]">{msg.receivedAt}</span>
-
-                    {/* Processing Status Badge */}
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                        msg.processingStatus === "Processed"
-                          ? "bg-[#1aae39]/10 text-[#1aae39] border-[#1aae39]/30"
-                          : msg.processingStatus === "Needs Review"
-                          ? "bg-[#dd5b00]/10 text-[#dd5b00] border-[#dd5b00]/30"
-                          : msg.processingStatus === "Failed"
-                          ? "bg-red-50 text-red-600 border-red-200"
-                          : "bg-gray-100 text-[#615d59] border-gray-200"
-                      }`}
+                    <div
+                      className={cn(
+                        "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold",
+                        isOutbound
+                          ? "bg-[#2383e2] text-white"
+                          : "bg-zinc-800 text-white"
+                      )}
                     >
-                      {msg.processingStatus}
+                      {isOutbound ? <Bot className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
+                    </div>
+                    <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                      {isOutbound ? "Cadance Coordinator" : msg.user_name || "Teammate"}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      {msg.created_at ? new Date(msg.created_at).toLocaleTimeString() : ""}
                     </span>
                   </div>
-                </div>
 
-                {/* Raw Inbound Message Text */}
-                <div className="py-2.5">
-                  <p className="text-xs text-[#000000] font-sans leading-relaxed italic bg-[#f6f5f4]/60 p-2.5 rounded-md border border-[#e6e6e6]/60">
-                    &ldquo;{msg.messageText}&rdquo;
-                  </p>
-                </div>
-
-                {/* AI Interpretation Card */}
-                <div className="p-3 bg-[#f6f5f4] rounded-lg border border-[#e6e6e6] space-y-2 text-xs">
-                  <div className="flex items-center justify-between flex-wrap gap-1.5">
-                    <div className="flex items-center gap-1.5 text-[#0075de] font-semibold text-[11px]">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>AI Interpretation</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white border border-[#e6e6e6] text-[#615d59]">
-                        Intent: {msg.interpretation.intent}
+                  <div className="flex items-center gap-1.5">
+                    {intent && intentStyle && (
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[10px] uppercase font-bold",
+                          intentStyle.bg,
+                          intentStyle.text
+                        )}
+                      >
+                        [{intent.replace("_", " ")}]
                       </span>
-                      {msg.confidence !== undefined && (
-                        <span className="text-[10px] font-semibold text-[#0075de] bg-[#0075de]/10 px-1.5 py-0.5 rounded border border-[#0075de]/20">
-                          {Math.round(msg.confidence * 100)}% Confidence
-                        </span>
-                      )}
-                    </div>
+                    )}
+
+                    {msg.confidence !== undefined && (
+                      <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                        {Math.round(msg.confidence * 100)}% conf
+                      </span>
+                    )}
                   </div>
-
-                  <p className="text-xs text-[#31302e] font-medium leading-relaxed">
-                    {msg.interpretation.summary}
-                  </p>
-
-                  {/* Blocker Callout if detected */}
-                  {isBlocked && (
-                    <div className="p-2 bg-orange-50 border border-[#dd5b00]/30 rounded text-xs space-y-1">
-                      <div className="flex items-center gap-1.5 text-[#dd5b00] font-semibold text-[11px]">
-                        <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                        <span>Blocker: {msg.interpretation.blockerDescription}</span>
-                      </div>
-                      {msg.interpretation.missingDependency && (
-                        <p className="text-[11px] text-[#615d59]">
-                          <strong className="text-[#000000]">Missing Dependency:</strong>{" "}
-                          {msg.interpretation.missingDependency}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Next Action recommendation */}
-                  {msg.interpretation.suggestedNextAction && (
-                    <div className="flex items-start gap-1.5 text-[11px] text-[#615d59] pt-1">
-                      <ArrowRight className="w-3 h-3 text-[#0075de] shrink-0 mt-0.5" />
-                      <span>
-                        <strong className="text-[#000000]">Next Action:</strong>{" "}
-                        {msg.interpretation.suggestedNextAction}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
-                {/* Footer: Related Task & Quick Actions */}
-                <div className="flex items-center justify-between pt-3 mt-2 border-t border-[#f6f5f4] flex-wrap gap-2">
-                  {/* Related Task Chip */}
-                  {msg.relatedTaskId ? (
-                    <button
-                      type="button"
-                      onClick={() => onOpenTaskDrawer(msg.relatedTaskId!)}
-                      className="group flex items-center gap-1.5 text-xs text-[#0075de] hover:text-[#005bab] transition-colors cursor-pointer text-left"
-                    >
-                      <span className="font-mono text-[10px] font-bold bg-[#0075de]/10 group-hover:bg-[#0075de]/20 px-1.5 py-0.5 rounded border border-[#0075de]/30">
-                        {msg.relatedTaskCode}
-                      </span>
-                      <span className="font-medium underline-offset-2 group-hover:underline truncate max-w-[200px] sm:max-w-xs">
-                        {msg.relatedTaskTitle}
-                      </span>
-                      <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100 shrink-0" />
-                    </button>
-                  ) : (
-                    <span className="text-[11px] text-[#a39e98] italic">
-                      No linked commitment (General Team Chatter)
-                    </span>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-1.5 ml-auto">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onInspectMessage(msg)}
-                      className="h-7 text-xs border-[#e6e6e6] text-[#615d59] hover:bg-[#f6f5f4] flex items-center gap-1"
-                    >
-                      <Eye className="w-3 h-3" />
-                      <span>Inspect</span>
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onToggleReviewStatus(msg.id)}
-                      className={`h-7 text-xs flex items-center gap-1 ${
-                        isNeedsReview
-                          ? "bg-[#1aae39]/10 text-[#1aae39] hover:bg-[#1aae39]/20 border-[#1aae39]/30"
-                          : "border-[#e6e6e6] text-[#615d59] hover:bg-[#f6f5f4]"
-                      }`}
-                    >
-                      {isNeedsReview ? (
-                        <>
-                          <Check className="w-3 h-3" />
-                          <span>Resolve Review</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertTriangle className="w-3 h-3 text-[#dd5b00]" />
-                          <span>Needs Review</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                <div className="text-xs text-zinc-800 dark:text-zinc-200 pl-8 leading-relaxed font-mono">
+                  {msg.text}
                 </div>
               </div>
             );
-          })}
+          })
+        )}
+      </div>
+
+      {/* Inspect Message Modal */}
+      {inspectedMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-2xs p-4">
+          <div className="w-full max-w-md rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-zinc-800">
+              <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                Message Deep Inspection
+              </h3>
+              <button
+                onClick={() => setInspectedMessage(null)}
+                className="text-zinc-400 hover:text-zinc-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div>
+                <span className="text-zinc-400">Direction:</span>{" "}
+                <strong className="font-semibold">{inspectedMessage.direction}</strong>
+              </div>
+              <div>
+                <span className="text-zinc-400">Sender / Recipient:</span>{" "}
+                <strong className="font-semibold">{inspectedMessage.user_name || "User"}</strong>
+              </div>
+              <div>
+                <span className="text-zinc-400">Intent:</span>{" "}
+                <strong className="font-semibold uppercase">{inspectedMessage.intent || "N/A"}</strong>
+              </div>
+              <div>
+                <span className="text-zinc-400">Payload:</span>
+                <p className="mt-1 rounded bg-zinc-50 p-2 font-mono text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 border">
+                  &quot;{inspectedMessage.text}&quot;
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button size="sm" variant="outline" onClick={() => setInspectedMessage(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

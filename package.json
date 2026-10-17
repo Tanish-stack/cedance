@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "server": "node backend/server.js",
-    "lint": "eslint"
+    "lint": "eslint src"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@google/genai": "^2.30.0",
     "@reduxjs/toolkit": "^2.13.0",
     "@supabase/supabase-js": "^2.118.0",
     "class-variance-authority": "^0.7.1",

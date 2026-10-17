@@ -1,460 +1,265 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { X, Plus, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Calendar, AlertCircle, Link2 } from "lucide-react";
-import type { CommitmentTask } from "@/types/task";
-import type { TaskStatus } from "@/lib/design-tokens";
+import { Task, User as TeamUser, Priority } from "@/lib/types";
 
 interface NewCommitmentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  existingTasks: CommitmentTask[];
-  onCreateCommitment: (newTask: CommitmentTask) => void;
+  onCreateCommitment: (taskData: Partial<Task> & { dependencies?: string[] }) => Promise<void>;
+  users: TeamUser[];
+  existingTasks: Task[];
 }
-
-const MOCK_TEAM_MEMBERS = [
-  {
-    id: "00000000-0000-0000-0000-000000000002",
-    name: "Kabir",
-    username: "kabir_dev",
-    role: "Backend & Payments",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000003",
-    name: "Aisha",
-    username: "aisha_ui",
-    role: "UI & Design System",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000004",
-    name: "Ravi",
-    username: "ravi_ops",
-    role: "DevOps & Compliance",
-  },
-];
-
-const MOCK_MILESTONES_LIST = [
-  "Sprint 1: Architecture & DB",
-  "Sprint 2: UI Foundation",
-  "Sprint 3: API Integration",
-  "Sprint 4: Verification & Demo",
-];
 
 export function NewCommitmentDialog({
   isOpen,
   onClose,
-  existingTasks,
   onCreateCommitment,
+  users,
+  existingTasks,
 }: NewCommitmentDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [assigneeId, setAssigneeId] = useState(MOCK_TEAM_MEMBERS[0].id);
-  const [milestone, setMilestone] = useState(MOCK_MILESTONES_LIST[2]); // Default Sprint 3
-  const [priority, setPriority] = useState<"Low" | "Medium" | "High" | "Critical">("Medium");
-  const [deadline, setDeadline] = useState("2026-10-25");
-  const [initialStatus, setInitialStatus] = useState<TaskStatus>("Assigned");
-  const [selectedPrereqId, setSelectedPrereqId] = useState<string>("none");
+  const [ownerId, setOwnerId] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [acceptanceCriteria, setAcceptanceCriteria] = useState("");
-
-  const [titleError, setTitleError] = useState<string | null>(null);
+  const [evidenceRequired, setEvidenceRequired] = useState<"link" | "text" | "file">("link");
+  const [selectedDependency, setSelectedDependency] = useState("");
+  const [priority, setPriority] = useState<Priority>("Medium");
+  const [milestone] = useState("M1: Payments & Core Engine");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function resetForm() {
-    setTitle("");
-    setDescription("");
-    setAssigneeId(MOCK_TEAM_MEMBERS[0].id);
-    setMilestone(MOCK_MILESTONES_LIST[2]);
-    setPriority("Medium");
-    setDeadline("2026-10-25");
-    setInitialStatus("Assigned");
-    setSelectedPrereqId("none");
-    setAcceptanceCriteria("");
-    setTitleError(null);
-    setIsSubmitting(false);
-  }
+  if (!isOpen) return null;
 
-  function handleClose() {
-    resetForm();
-    onClose();
-  }
-
-  function getNextTaskCode(): string {
-    const numbers = existingTasks
-      .map((t) => {
-        const match = t.code.match(/TSK-(\d+)/i);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter((n) => !isNaN(n));
-    const maxNum = numbers.length > 0 ? Math.max(...numbers) : existingTasks.length;
-    return `TSK-${(maxNum + 1).toString().padStart(2, "0")}`;
-  }
-
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Inline validation
     if (!title.trim()) {
-      setTitleError("Commitment title is required.");
+      setError("Title is required");
       return;
     }
 
     setIsSubmitting(true);
+    setError(null);
 
-    const owner = MOCK_TEAM_MEMBERS.find((m) => m.id === assigneeId) || MOCK_TEAM_MEMBERS[0];
-    const prereqTask = existingTasks.find((t) => t.id === selectedPrereqId);
-    const nextCode = getNextTaskCode();
+    try {
+      await onCreateCommitment({
+        title: title.trim(),
+        description: description.trim(),
+        owner_id: ownerId || null,
+        deadline: deadline || null,
+        acceptance_criteria: acceptanceCriteria.trim(),
+        evidence_required: evidenceRequired,
+        priority,
+        milestone,
+        dependencies: selectedDependency ? [selectedDependency] : [],
+      });
 
-    const isAtRisk =
-      priority === "Critical" || priority === "High" || initialStatus === "Blocked";
-
-    const newTask: CommitmentTask = {
-      id: `task-${Date.now()}`,
-      code: nextCode,
-      projectId: "00000000-0000-0000-0001-000000000001",
-      projectName: "Cadence / Capstone Alpha",
-      milestone,
-      title: title.trim(),
-      description: description.trim() || `Deliverable commitment for ${milestone}.`,
-      ownerId: owner.id,
-      ownerName: owner.name,
-      ownerUsername: owner.username,
-      status: initialStatus,
-      progressPct:
-        initialStatus === "Complete" ? 100 : initialStatus === "In Progress" ? 25 : 0,
-      deadline: deadline || "2026-10-30",
-      acceptanceCriteria:
-        acceptanceCriteria.trim() || "Implementation completed and approved by team lead.",
-      evidenceRequired: "link",
-      blockerText:
-        initialStatus === "Blocked"
-          ? "Initial blocker reported during commitment creation."
-          : null,
-      blockerOwnerName: null,
-      blockerDetectedAt: initialStatus === "Blocked" ? "Just now" : null,
-      atRisk: isAtRisk,
-      lastUpdateAt: "Today",
-      nextFollowupAt: "Tomorrow at 10:00 AM",
-      followupCount: 0,
-      aiInterpretation: null,
-      dependencies: {
-        prerequisites: prereqTask
-          ? [
-              {
-                id: prereqTask.id,
-                title: prereqTask.title,
-                status: prereqTask.status,
-                ownerName: prereqTask.ownerName,
-                atRisk: prereqTask.atRisk,
-              },
-            ]
-          : [],
-        dependents: [],
-      },
-      suggestedActions: [
-        `Align with @${owner.username} on acceptance criteria and delivery date.`,
-        "Check prerequisite dependencies before testing.",
-      ],
-      activityHistory: [
-        {
-          id: `act-create-${Date.now()}`,
-          timestamp: "Just now",
-          newStatus: initialStatus,
-          reason: `Commitment created with priority ${priority} assigned to ${owner.name}.`,
-          source: "manager",
-        },
-      ],
-    };
-
-    // Simulated short delay to prevent multi-click races
-    setTimeout(() => {
-      onCreateCommitment(newTask);
-      handleClose();
-    }, 200);
-  }
+      // Reset
+      setTitle("");
+      setDescription("");
+      setOwnerId("");
+      setDeadline("");
+      setAcceptanceCriteria("");
+      setSelectedDependency("");
+      onClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg || "Failed to create commitment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-lg p-5 bg-white border border-[#e6e6e6] rounded-xl shadow-lg max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <DialogHeader className="space-y-1 pb-2 border-b border-[#e6e6e6]">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-7 h-7 rounded-md bg-[#0075de]/10 text-[#0075de]">
-                <Plus className="w-4 h-4" />
-              </div>
-              <DialogTitle className="text-base font-bold text-[#000000]">
-                New Commitment
-              </DialogTitle>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-2xs p-4 animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg rounded-xl border border-[#e6e6e6] bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#e6e6e6] px-5 py-3.5 dark:border-zinc-800">
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#2383e2] text-white">
+              <Plus className="h-3.5 w-3.5" />
             </div>
-            <DialogDescription className="text-xs text-[#615d59]">
-              Define a new deliverable, assign an owner, set a deadline, and link dependencies.
-            </DialogDescription>
-          </DialogHeader>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              New Project Commitment
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-          <div className="space-y-3.5 text-xs">
-            {/* 1. Title (Required) */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block">
-                  Commitment Title <span className="text-red-500">*</span>
-                </label>
-                {titleError && (
-                  <span className="text-[10px] text-red-600 font-medium flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {titleError}
-                  </span>
-                )}
-              </div>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  if (titleError && e.target.value.trim()) {
-                    setTitleError(null);
-                  }
-                }}
-                placeholder="e.g. Implement Webhook Signature Verification"
-                className={`w-full h-8 px-2.5 text-xs bg-[#f6f5f4] border rounded-md outline-none transition-all text-[#000000] ${
-                  titleError
-                    ? "border-red-500 focus:border-red-600 bg-red-50/20"
-                    : "border-[#e6e6e6] focus:border-[#0075de]"
-                }`}
-              />
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+          {error && (
+            <div className="rounded-md bg-rose-50 p-2.5 text-xs text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+              {error}
             </div>
+          )}
 
-            {/* 2. Description */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block">
-                Description (Optional)
+          {/* Title */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              Commitment Title <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Integrate Stripe Webhooks for Instant Payouts"
+              className="w-full rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs text-zinc-900 placeholder-zinc-400 focus:border-[#2383e2] focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+              required
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              Context & Instructions
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Provide context, test mode notes, or repository links..."
+              rows={2}
+              className="w-full rounded-md border border-[#e6e6e6] bg-white p-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:border-[#2383e2] focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+            />
+          </div>
+
+          {/* Assignee & Deadline */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Assignee
               </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief technical scope or context for this commitment..."
-                rows={2}
-                className="w-full p-2 text-xs bg-[#f6f5f4] border border-[#e6e6e6] rounded-md outline-none focus:border-[#0075de] text-[#000000] resize-none"
-              />
-            </div>
-
-            {/* 3. Assignee & Milestone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Assignee */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block">
-                  Assignee
-                </label>
-                <Select
-                  value={assigneeId}
-                  onValueChange={(val) => val && setAssigneeId(val)}
-                >
-                  <SelectTrigger className="h-8 text-xs bg-[#f6f5f4] border-[#e6e6e6] w-full">
-                    <SelectValue placeholder="Select Assignee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MOCK_TEAM_MEMBERS.map((member) => (
-                      <SelectItem key={member.id} value={member.id} className="text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-[#000000]">{member.name}</span>
-                          <span className="text-[10px] text-[#a39e98]">(@{member.username})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Milestone */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block">
-                  Milestone
-                </label>
-                <Select
-                  value={milestone}
-                  onValueChange={(val) => val && setMilestone(val)}
-                >
-                  <SelectTrigger className="h-8 text-xs bg-[#f6f5f4] border-[#e6e6e6] w-full">
-                    <SelectValue placeholder="Select Milestone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MOCK_MILESTONES_LIST.map((m) => (
-                      <SelectItem key={m} value={m} className="text-xs">
-                        {m}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* 4. Priority & Initial Status */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Priority */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block">
-                  Priority
-                </label>
-                <Select
-                  value={priority}
-                  onValueChange={(val) =>
-                    val && setPriority(val as "Low" | "Medium" | "High" | "Critical")
-                  }
-                >
-                  <SelectTrigger className="h-8 text-xs bg-[#f6f5f4] border-[#e6e6e6] w-full">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low" className="text-xs text-[#1aae39]">
-                      Low
-                    </SelectItem>
-                    <SelectItem value="Medium" className="text-xs text-[#213183]">
-                      Medium
-                    </SelectItem>
-                    <SelectItem value="High" className="text-xs text-[#dd5b00]">
-                      High
-                    </SelectItem>
-                    <SelectItem value="Critical" className="text-xs text-red-600 font-semibold">
-                      Critical
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Initial Status */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block">
-                  Initial Status
-                </label>
-                <Select
-                  value={initialStatus}
-                  onValueChange={(val) => val && setInitialStatus(val as TaskStatus)}
-                >
-                  <SelectTrigger className="h-8 text-xs bg-[#f6f5f4] border-[#e6e6e6] w-full">
-                    <SelectValue placeholder="Initial Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Assigned" className="text-xs">
-                      Assigned (Default)
-                    </SelectItem>
-                    <SelectItem value="In Progress" className="text-xs text-[#0075de]">
-                      In Progress
-                    </SelectItem>
-                    <SelectItem value="Blocked" className="text-xs text-[#dd5b00]">
-                      Blocked
-                    </SelectItem>
-                    <SelectItem value="Pending Verification" className="text-xs text-[#213183]">
-                      Pending Verification
-                    </SelectItem>
-                    <SelectItem value="Complete" className="text-xs text-[#1aae39]">
-                      Complete
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* 5. Due Date & Acceptance Criteria */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block">
-                  Due Date (Optional)
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a39e98]" />
-                  <input
-                    type="date"
-                    value={deadline}
-                    onChange={(e) => setDeadline(e.target.value)}
-                    className="w-full h-8 pl-8 pr-2 text-xs bg-[#f6f5f4] border border-[#e6e6e6] rounded-md outline-none focus:border-[#0075de] text-[#000000]"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block">
-                  Acceptance Criteria
-                </label>
-                <input
-                  type="text"
-                  value={acceptanceCriteria}
-                  onChange={(e) => setAcceptanceCriteria(e.target.value)}
-                  placeholder="e.g. Unit tests pass & PR approved"
-                  className="w-full h-8 px-2.5 text-xs bg-[#f6f5f4] border border-[#e6e6e6] rounded-md outline-none focus:border-[#0075de] text-[#000000]"
-                />
-              </div>
-            </div>
-
-            {/* 6. Dependencies (Prerequisite Task) */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-[#615d59] uppercase tracking-wider block flex items-center gap-1">
-                <Link2 className="w-3 h-3 text-[#615d59]" />
-                <span>Prerequisite Dependency (Optional)</span>
-              </label>
-              <Select
-                value={selectedPrereqId}
-                onValueChange={(val) => val && setSelectedPrereqId(val)}
+              <select
+                value={ownerId}
+                onChange={(e) => setOwnerId(e.target.value)}
+                className="w-full rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
               >
-                <SelectTrigger className="h-8 text-xs bg-[#f6f5f4] border-[#e6e6e6] w-full">
-                  <SelectValue placeholder="None" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none" className="text-xs">
-                    None (No Prerequisite)
-                  </SelectItem>
-                  {existingTasks.map((t) => (
-                    <SelectItem key={t.id} value={t.id} className="text-xs">
-                      {t.code}: {t.title} ({t.ownerName})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">Unassigned</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Target Deadline
+              </label>
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="w-full rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+              />
             </div>
           </div>
 
-          <DialogFooter className="pt-2 border-t border-[#e6e6e6] flex sm:justify-end gap-2">
+          {/* Acceptance Criteria (Critical for AI Done-verification) */}
+          <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-950/20 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-900 dark:text-blue-300">
+              <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
+              <span>Acceptance Criteria (What &quot;Done&quot; Means)</span>
+            </div>
+            <textarea
+              value={acceptanceCriteria}
+              onChange={(e) => setAcceptanceCriteria(e.target.value)}
+              placeholder="e.g. A payment request succeeds in test mode and the PR link is shared."
+              rows={2}
+              className="w-full rounded-md border border-blue-200 bg-white p-2 text-xs text-zinc-900 placeholder-zinc-400 focus:border-[#2383e2] focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+            />
+            <div className="flex items-center justify-between text-[11px] text-blue-800/80 dark:text-blue-300/80 pt-1">
+              <span>Required Evidence Type:</span>
+              <div className="flex items-center gap-2">
+                <label className="inline-flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="evidenceType"
+                    checked={evidenceRequired === "link"}
+                    onChange={() => setEvidenceRequired("link")}
+                  />
+                  <span>PR / Link</span>
+                </label>
+                <label className="inline-flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="evidenceType"
+                    checked={evidenceRequired === "text"}
+                    onChange={() => setEvidenceRequired("text")}
+                  />
+                  <span>Text</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Prerequisite & Milestone */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Prerequisite Dependency
+              </label>
+              <select
+                value={selectedDependency}
+                onChange={(e) => setSelectedDependency(e.target.value)}
+                className="w-full rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">No Prerequisite</option>
+                {existingTasks.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Priority
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as Priority)}
+                className="w-full rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Footer actions */}
+          <div className="flex items-center justify-end gap-2 border-t border-[#e6e6e6] pt-4 dark:border-zinc-800">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="h-8 text-xs border-[#e6e6e6]"
+              onClick={onClose}
+              className="text-xs"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              size="sm"
-              disabled={isSubmitting}
-              className="h-8 text-xs bg-[#0075de] hover:bg-[#005bab] text-white rounded-md font-medium px-4 shadow-xs"
+              disabled={isSubmitting || !title.trim()}
+              className="bg-[#2383e2] hover:bg-[#1a73cb] text-white text-xs font-medium shadow-xs"
             >
-              {isSubmitting ? (
-                <span>Creating...</span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Create Commitment</span>
-                </span>
-              )}
+              {isSubmitting ? "Creating & Notifying..." : "Create & Dispatch to Telegram"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

@@ -7,14 +7,18 @@ const { createClient } = require("@supabase/supabase-js");
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!url || !key) {
-    throw new Error(
-        "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in backend/.env",
-    );
-}
+let supabase = null;
 
-const supabase = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-});
+if (url && key && !url.includes("your-project") && !key.includes("your-key")) {
+    try {
+        supabase = createClient(url, key, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+    } catch (err) {
+        console.warn("Could not initialize Supabase client:", err.message);
+    }
+} else {
+    console.log("[db.js] Supabase credentials not set or using placeholder; using in-memory mock store with seed data.");
+}
 
 module.exports = supabase;

@@ -2,10 +2,14 @@
  * Supabase client — uses the service-role key so it bypasses RLS.
  * Only use this on the backend. Never expose the service-role key to the frontend.
  */
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
+require("dotenv").config({ path: path.join(__dirname, "..", ".env.local") });
+
 const { createClient } = require("@supabase/supabase-js");
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 let supabase = null;
 
